@@ -1,0 +1,455 @@
+<?xml version="1.0"?>
+
+<!-- Scenario 1: To Classify Files into Individual Assgn and Extra Assgn -->
+<!-- default = ClassifyAssgnType / ClassifyFileType / ClassifyAssgnFileType -->
+ <project name="ACS" default="ClassifyAssgnType" > 
+
+<!-- <project name="ACS" default="gen-classify-ftype" > -->
+
+<!-- Initialize by creating all the directories for the build-->
+
+  <target name="init-atype" depends="clean">
+    <mkdir dir="ClassifiedAssgn/Ind-Assgn" />
+    <mkdir dir="ClassifiedAssgn/Ext-Assgn" />
+    <mkdir dir="build/classes" />
+    <antcall target="GenDataFiles"/>
+  </target>
+
+  <target name="init-ftype" depends="clean">
+    <mkdir dir="ClassifiedAssgn/pdf" />
+    <mkdir dir="ClassifiedAssgn/doc" />
+    <mkdir dir="build/classes" />
+    <antcall target="GenDataFiles"/>
+  </target>
+
+  <target name="init-aftype" depends="clean">
+    <mkdir dir="ClassifiedAssgn/Ind-Assgn/pdf" />
+    <mkdir dir="ClassifiedAssgn/Ind-Assgn/doc" />
+    <mkdir dir="ClassifiedAssgn/Ext-Assgn/pdf" />
+    <mkdir dir="ClassifiedAssgn/Ext-Assgn/doc" />
+    <mkdir dir="build/classes" />
+    <antcall target="GenDataFiles"/>
+  </target>
+
+<target name="GenDataFiles">
+  <exec dir="." executable="/bin/bash">
+    <arg path="src/GenData.sh"/> 
+<!-- Number of Files = arg value x 4. Keep Atleast a Minimum of 20. Only 20% of the data is given for training. If the value is 20, then only 20% of it (5 entries) will be given and they dont get trained correctly and hence, will not be classified correctly. A value of 20 will generate 80 files in the Data folder 
+-->
+    <arg value="50"/>  
+  </exec> 
+</target>
+
+
+<!-- Generate the Classify-all text file-->
+
+<target name="ClassifyAssgnType" depends="compile-atype">
+  <java
+    classname="EncodeFName"
+    classpath="build/classes">
+    <arg value="build/classify"/>
+    <!-- atype / ftype -->
+    <arg value="atype"/>
+    <arg value="Data"/>
+ </java>
+ <antcall target="split-Atype-classify-all-txt"/>
+</target>
+
+<target name="ClassifyFileType" depends="compile-ftype">
+  <java
+    classname="EncodeFName"
+    classpath="build/classes">
+    <arg value="build/classify"/>
+    <!-- atype / ftype -->
+    <arg value="ftype"/>
+    <arg value="Data"/>
+ </java>
+ <antcall target="split-Ftype-classify-all-txt"/>
+</target>
+
+<target name="ClassifyAssgnFileType" depends="compile-aftype">
+  <java
+    classname="EncodeFName"
+    classpath="build/classes">
+    <arg value="build/classify"/>
+    <!-- atype / ftype -->
+    <arg value="atype"/>
+    <arg value="Data"/>
+ </java>
+ <antcall target="split-Atype-classify-all-txt"/>
+ <echo>Stage1 complete!</echo>
+  <antcall target="Classify-Ind-Assgn-Data"/>
+ <antcall target="Classify-Ext-Assgn-Data-all"/>
+</target>
+
+<target name="Classify-Ind-Assgn-Data"> 
+<echo>Cleaning Up Build Directories</echo>
+<delete dir="build" />
+<mkdir dir="build/classes" />
+<javac srcdir="src"
+      destdir="build/classes"
+      />
+
+<echo>Encode Fname </echo>
+<java
+    classname="EncodeFName"
+    classpath="build/classes">
+    <arg value="build/classify"/>
+    <!-- atype / ftype -->
+    <arg value="ftype"/>
+    <arg value="ClassifiedAssgn/Ind-Assgn"/>
+ </java>
+<echo>Split Classify-all </echo>
+  <exec dir="." executable="/bin/bash">
+    <arg path="src/SplitData.sh"/>
+    <arg value="ftype"/>
+  </exec>
+<echo>Gen Train Data </echo>  
+  <exec dir="." executable="/bin/bash">
+    <arg path="src/AssgnTrainData.sh"/>
+    <arg value="ftype"/>
+  </exec>
+<echo>Train Data </echo>
+  <property name="mahout.dir" value="/usr/local/mahout/mahout-distribution-0.7"/>
+  <property name="data.dir" value="/usr/local/project272/build"/>
+  <exec dir="." executable="/bin/bash">
+    <arg path="${mahout.dir}/bin/mahout"/>
+    <arg value="trainlogistic"/>
+    <arg value="--input"/>
+    <arg value="${data.dir}/classify-train.txt"/>
+    <arg value="--output"/>
+    <arg value="./build/model"/>
+    <arg value="--target"/>
+    <arg value="classify"/>
+    <arg value="--categories"/>
+    <arg value="2"/>
+    <arg value="--predictors"/>
+    <arg value="nametag"/>
+    <arg value="ftype"/>
+    <arg value="--types"/>
+    <arg value="numeric"/>
+    <arg value="--features"/>
+    <arg value="20"/>
+    <arg value="--passes"/>
+    <arg value="100"/>
+    <arg value="--rate"/>
+    <arg value="50"/>
+  </exec>
+<echo>Test Data </echo>
+  <exec dir="." executable="/bin/bash">
+    <arg path="src/TestData.sh"/>   
+  </exec>
+<echo>Parse Mahout Data </echo>
+  <exec dir="." executable="/bin/bash">
+    <arg path="src/ParseMOutput.sh"/>   
+  </exec>
+<echo>Classify Files </echo>
+  <java
+    classname="ClassifyFiles"
+    classpath="build/classes">
+    <arg value="Ind-Assgn/doc"/>
+    <arg value="Ind-Assgn/pdf"/>
+    <arg value="AF"/>
+    <arg value="Ind-Assgn"/>
+  </java>
+
+</target>
+
+<target name="Classify-Ext-Assgn-Data-all"> 
+<echo>Cleaning Up Build Directories</echo>
+<delete dir="build" />
+<mkdir dir="build/classes" />
+<javac srcdir="src"
+      destdir="build/classes"
+      />
+
+<echo>Encode Fname </echo>
+<java
+    classname="EncodeFName"
+    classpath="build/classes">
+    <arg value="build/classify"/>
+    <!-- atype / ftype -->
+    <arg value="ftype"/>
+    <arg value="ClassifiedAssgn/Ext-Assgn"/>
+ </java>
+<echo>Split Classify-all </echo>
+  <exec dir="." executable="/bin/bash">
+    <arg path="src/SplitData.sh"/>
+    <arg value="ftype"/>
+  </exec>
+<echo>Gen Train Data </echo>  
+  <exec dir="." executable="/bin/bash">
+    <arg path="src/AssgnTrainDataI.sh"/>
+    <arg value="ftype"/>
+  </exec>
+<echo>Train Data </echo>
+  <property name="mahout.dir" value="/usr/local/mahout/mahout-distribution-0.7"/>
+  <property name="data.dir" value="/usr/local/project272/build"/>
+  <exec dir="." executable="/bin/bash">
+    <arg path="${mahout.dir}/bin/mahout"/>
+    <arg value="trainlogistic"/>
+    <arg value="--input"/>
+    <arg value="${data.dir}/classify-train.txt"/>
+    <arg value="--output"/>
+    <arg value="./build/model"/>
+    <arg value="--target"/>
+    <arg value="classify"/>
+    <arg value="--categories"/>
+    <arg value="2"/>
+    <arg value="--predictors"/>
+    <arg value="nametag"/>
+    <arg value="ftype"/>
+    <arg value="--types"/>
+    <arg value="numeric"/>
+    <arg value="--features"/>
+    <arg value="20"/>
+    <arg value="--passes"/>
+    <arg value="100"/>
+    <arg value="--rate"/>
+    <arg value="50"/>
+  </exec>
+<echo>Test Data </echo>
+  <exec dir="." executable="/bin/bash">
+    <arg path="src/TestData.sh"/>   
+  </exec>
+<echo>Parse Mahout Data </echo>
+  <exec dir="." executable="/bin/bash">
+    <arg path="src/ParseMOutput.sh"/>   
+  </exec>
+<echo>Classify Files </echo>
+  <java
+    classname="ClassifyFiles"
+    classpath="build/classes">
+    <arg value="Ext-Assgn/pdf"/>
+    <arg value="Ext-Assgn/doc"/>
+    <arg value="AF"/>
+    <arg value="Ext-Assgn"/>
+  </java>
+
+</target>
+
+
+<target name="Classify-Ext-Assgn-Data"> 
+<java
+    classname="EncodeFName"
+    classpath="build/classes">
+    <arg value="build/classify"/>
+    <!-- atype / ftype -->
+    <arg value="ftype"/>
+    <arg value="ClassifiedAssgn/Ind-Assgn"/>
+ </java>
+</target>
+
+
+<!-- Split the classify-all text file into:
+     1.classify-test.txt
+     2.classify-train.txt
+-->
+
+<target name="split-Atype-classify-all-txt">
+  <exec dir="." executable="/bin/bash">
+    <arg path="src/SplitData.sh"/>
+    <arg value="atype"/>
+  </exec>
+   <antcall target="Gen-Atype-Train-Data"/>
+</target>
+
+<target name="split-Ftype-classify-all-txt">
+  <exec dir="." executable="/bin/bash">
+    <arg path="src/SplitData.sh"/>
+    <arg value="ftype"/>
+  </exec>
+  <antcall target="Gen-Ftype-Train-Data"/>
+</target>
+
+<!-- Generate the output for the classify column in classify-train.txt -->
+
+<target name="Gen-Atype-Train-Data">
+  <exec dir="." executable="/bin/bash">
+    <arg path="src/AssgnTrainData.sh"/>
+    <arg value="atype"/>
+  </exec>
+  <antcall target="Train-Data-Atype"/>
+</target>
+
+<target name="Gen-Ftype-Train-Data">
+  <exec dir="." executable="/bin/bash">
+    <arg path="src/AssgnTrainData.sh"/>
+    <arg value="ftype"/>
+  </exec>
+  <antcall target="Train-Data-Ftype"/>
+</target>
+
+<!-- Using Mahout, Create a Model for this problem from the training data 
+
+     Target: classify
+     Predictors: nametag and atype
+-->
+
+
+<target name="Train-Data-Atype">
+  <property name="mahout.dir" value="/usr/local/mahout/mahout-distribution-0.7"/>
+  <property name="data.dir" value="/usr/local/project272/build"/>
+  <exec dir="." executable="/bin/bash">
+    <arg path="${mahout.dir}/bin/mahout"/>
+    <arg value="trainlogistic"/>
+    <arg value="--input"/>
+    <arg value="${data.dir}/classify-train.txt"/>
+    <arg value="--output"/>
+    <arg value="./build/model"/>
+    <arg value="--target"/>
+    <arg value="classify"/>
+    <arg value="--categories"/>
+    <arg value="2"/>
+    <arg value="--predictors"/>
+    <arg value="nametag"/>
+    <arg value="atype"/>
+    <arg value="--types"/>
+    <arg value="numeric"/>
+    <arg value="--features"/>
+    <arg value="20"/>
+    <arg value="--passes"/>
+    <arg value="100"/>
+    <arg value="--rate"/>
+    <arg value="50"/>
+  </exec>
+  <antcall target="Test-Data-Atype"/>
+</target>
+
+<target name="Train-Data-Ftype">
+  <property name="mahout.dir" value="/usr/local/mahout/mahout-distribution-0.7"/>
+  <property name="data.dir" value="/usr/local/project272/build"/>
+  <exec dir="." executable="/bin/bash">
+    <arg path="${mahout.dir}/bin/mahout"/>
+    <arg value="trainlogistic"/>
+    <arg value="--input"/>
+    <arg value="${data.dir}/classify-train.txt"/>
+    <arg value="--output"/>
+    <arg value="./build/model"/>
+    <arg value="--target"/>
+    <arg value="classify"/>
+    <arg value="--categories"/>
+    <arg value="2"/>
+    <arg value="--predictors"/>
+    <arg value="nametag"/>
+    <arg value="ftype"/>
+    <arg value="--types"/>
+    <arg value="numeric"/>
+    <arg value="--features"/>
+    <arg value="20"/>
+    <arg value="--passes"/>
+    <arg value="100"/>
+    <arg value="--rate"/>
+    <arg value="50"/>
+  </exec>
+  <antcall target="Test-Data-Ftype"/>
+</target>
+
+
+<!-- DEBUG : Using Mahout, Test Trial this data Model by running it on the training data -->
+
+<target name="Trial-Test-Data-Atype">
+  <property name="mahout.dir" value="/usr/local/mahout/mahout-distribution-0.7"/>
+  <property name="data.dir" value="/usr/local/project272/build"/>
+  <exec dir="." executable="/bin/bash">
+    <arg path="${mahout.dir}/bin/mahout"/>
+    <arg value="runlogistic"/>
+    <arg value="--input"/>
+    <arg value="${data.dir}/classify-train.txt"/>
+    <arg value="--model"/>
+    <arg value="./build/model"/>
+    <arg value="--auc"/>
+    <arg value="--confusion"/>
+    <arg value="--scores"/>    
+  </exec>
+ <antcall target="Test-Data-Atype"/>
+</target>
+
+<!-- Using Mahout, Classify the test data using this Model  
+
+     Output: classify-test-output.txt
+
+-->
+
+<target name="Test-Data-Atype">
+  <exec dir="." executable="/bin/bash">
+    <arg path="src/TestData.sh"/>   
+  </exec>
+ <antcall target="ParseMahoutOutputAtype"/>
+</target>
+
+<target name="Test-Data-Ftype">
+  <exec dir="." executable="/bin/bash">
+    <arg path="src/TestData.sh"/>   
+  </exec>
+ <antcall target="ParseMahoutOutputFtype"/>
+</target>
+
+<!-- Parse the Mahout Output to Generate the classify-all-output.txt file  
+
+     Output: classify-all-output.txt
+
+-->
+<target name="ParseMahoutOutputAtype">
+  <exec dir="." executable="/bin/bash">
+    <arg path="src/ParseMOutput.sh"/>   
+  </exec>
+ <antcall target="ClassifyFilesAtype"/>
+</target>
+
+<target name="ParseMahoutOutputFtype">
+  <exec dir="." executable="/bin/bash">
+    <arg path="src/ParseMOutput.sh"/>   
+  </exec>
+ <antcall target="ClassifyFilesFtype"/>
+</target>
+
+<!-- Move the Files Based on the classify-all-output.txt file  -->
+<target name="ClassifyFilesAtype">
+  <java
+    classname="ClassifyFiles"
+    classpath="build/classes">
+    <arg value="Ind-Assgn"/>
+    <arg value="Ext-Assgn"/>
+    <arg value="A"/>
+ </java>
+</target>
+
+<target name="ClassifyFilesFtype">
+  <java
+    classname="ClassifyFiles"
+    classpath="build/classes">
+    <arg value="doc"/>
+    <arg value="pdf"/>
+    <arg value="A"/>
+ </java>
+</target>
+
+
+  <target name="compile-atype" depends="init-atype" >
+    <javac srcdir="src"
+      destdir="build/classes"
+      />
+    <echo>compilation complete!</echo>
+  </target>
+
+  <target name="compile-ftype" depends="init-ftype" >
+    <javac srcdir="src"
+      destdir="build/classes"
+      />
+    <echo>compilation complete!</echo>
+  </target>
+
+  <target name="compile-aftype" depends="init-aftype" >
+    <javac srcdir="src"
+      destdir="build/classes"
+      />
+    <echo>compilation complete!</echo>
+  </target>
+
+  <target name="clean">
+   <delete dir="build" />
+   <delete dir="ClassifiedAssgn" />
+  </target>
+
+</project>
