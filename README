@@ -1,0 +1,66 @@
+*************************************************************************************************
+*                                                                   TEAM 10                            *
+*                            ASSIGNMENT CLASSIFICATION ENGINE (ACE) v1.0                        *
+*                                                                                               *
+*************************************************************************************************
+
+**********
+* README *
+**********
+
+This software tool is designed to classify Assignment files based on the content of the file names in the format of pdf and doc present within a folder into the classified Assignment Folder.
+This tool is designed to run on linux system and was tested on a x86 system running linux mint.
+
+
+*********************************
+* Prerequisites for Running ACE * 
+*********************************
+
+1. JDK 1.6 or later
+2. Ant 1.9.0 or later
+3. Maven 2.2.1 or later
+4. Hadoop 1.0.4 or later
+
+
+**********************
+* Installation Steps *
+**********************
+
+After installing all prerequisite softwares mentioned above,
+
+1. Using the gunzip tool, extract all the files 
+ 
+
+2. The contents will now get extracted to
+   /usr/local/project272 folder
+
+
+3. The raw data before classification is available in the Data folder under 
+   /usr/local/project272/Data 
+
+**********************
+*     RUNNING ACE    *
+**********************
+
+For Content classification of Files :
+
+1. Go to folder : /usr/local/project272
+
+2. Run the following commands :
+
+   1. ClassifyAssgnType - To classify files based on content of the assignment file
+
+   2. ClassifyFileType  - To classify based on file type
+
+   3. ClassifyAssgnFileType - To classify based on the content of both file type and assignment type 
+
+
+**********************
+*      OUTPUT        *
+**********************
+
+The classified files gets sorted directly in :
+
+ /usr/local/project272/ ClassifiedAssgn  
+
+
